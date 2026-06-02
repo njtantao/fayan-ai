@@ -1,0 +1,15 @@
+databases:
+  - name: fayan-postgres
+    databaseName: fayan_db
+    plan: free
+
+services:
+  - type: web
+    name: fayan-ai
+    runtime: python
+    buildCommand: cd code && pip install -r requirements.txt
+    startCommand: cd code && uvicorn fayan_main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: MINIMAX_API_KEY
+        value: sk-cp-ky-cbLKQr5w4-KHrV9wKzxU-hTtYhNqZyyB6Q8If3N2YwMipNx4WsYzWszA7jzpAcUuCEERm_l98RaLSfZPCmpzVxOy8256mh07SP6qkeJMbUlZQcwrnIyg
