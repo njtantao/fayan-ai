@@ -1,1 +1,1 @@
-web: uvicorn code.fayan_main:app --host 0.0.0.0 --port ${PORT:-8000}
+web: pip install --no-cache-dir -r requirements.txt && python fayan_main.py server
