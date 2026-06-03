@@ -31,7 +31,7 @@ load_dotenv()
 
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", os.environ.get("MINIMAX_API_KEY_2", ""))
 MINIMAX_BASE_URL = "https://api.minimax.chat/v1"
-LLM_MODEL = "MiniMax-M2.7"
+LLM_MODEL = "MiniMax-M3"
 
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 CASES_CSV = os.path.join(DATA_DIR, "data", "all_cases_perfect.csv")
