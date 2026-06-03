@@ -264,7 +264,7 @@ class LegalRetriever:
         from rank_bm25 import BM25Okapi
 
         print(f"加载案例库: {csv_path}")
-        df = pd.read_csv(csv_path)
+        df = pd.read_parquet(csv_path)
 
         # 数据清洗
         df["案件描述"] = df["案件描述"].fillna("")

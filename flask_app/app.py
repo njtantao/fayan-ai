@@ -18,9 +18,9 @@ load_dotenv()
 
 # Environment variables (set in Render dashboard or .env locally)
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
-CSV_PATH = os.path.join(PROJECT_ROOT, "data", "all_cases_perfect.csv")
+PARQUET_PATH = os.path.join(PROJECT_ROOT, "data", "all_cases_perfect.parquet")
 PORT = int(os.environ.get("PORT", 5099))
-DATA_URL = os.environ.get("DATA_URL", "https://github.com/njtantao/fayan-ai/releases/download/v1.0.0/all_cases_perfect.csv")  # Optional: download case CSV at startup
+DATA_URL = os.environ.get("DATA_URL", "https://github.com/njtantao/fayan-ai/releases/download/v1.0.0/all_cases_perfect.parquet")  # Optional: download case Parquet at startup
 
 # 导入核心模块（从项目根目录导入）
 from fayan_main import FaYanLegal, MINIMAX_BASE_URL, LLM_MODEL
@@ -42,14 +42,14 @@ def get_fayan():
     global _fayan, _init_error
     if _fayan is None:
         # 启动时：如果CSV不存在但有DATA_URL，自动下载
-        if DATA_URL and not os.path.exists(CSV_PATH):
+        if DATA_URL and not os.path.exists(PARQUET_PATH):
             print(f"案例库不存在，从 {DATA_URL} 下载...")
             try:
                 import urllib.request
-                os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
-                urllib.request.urlretrieve(DATA_URL, CSV_PATH + ".tmp")
-                os.rename(CSV_PATH + ".tmp", CSV_PATH)
-                print(f"案例库下载完成: {CSV_PATH}")
+                os.makedirs(os.path.dirname(PARQUET_PATH), exist_ok=True)
+                urllib.request.urlretrieve(DATA_URL, PARQUET_PATH + ".tmp")
+                os.rename(PARQUET_PATH + ".tmp", PARQUET_PATH)
+                print(f"案例库下载完成: {PARQUET_PATH}")
             except Exception as e:
                 print(f"下载案例库失败: {e}")
 
@@ -62,7 +62,7 @@ def get_fayan():
                 api_key=api_key,
                 base_url=MINIMAX_BASE_URL,
                 model=LLM_MODEL,
-                csv_path=CSV_PATH
+                csv_path=PARQUET_PATH
             )
             _init_error = None
             print(f"法眼AI 加载案例库: {_fayan.retriever.cases.__len__()} 条")
@@ -198,7 +198,7 @@ def health():
 if __name__ == "__main__":
     print(f"法眼AI 启动中...")
     print(f"API Key: {'已设置 ✓' if MINIMAX_API_KEY else '未设置 ✗'}")
-    print(f"案例库: {CSV_PATH}")
+    print(f"案例库: {PARQUET_PATH}")
     print(f"访问地址: http://localhost:{PORT}")
     print(f"按 Ctrl+C 停止服务")
     app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
