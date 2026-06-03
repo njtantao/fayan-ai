@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# macOS
+.DS_Store
+._*
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Local env (contains secrets)
+.env
+.env.local
+.env.*.local
+
+# Large data files (use Git LFS)
+*.csv
+*.parquet
+*.db
+
+# OS junk
+*.log
+*.tmp
+Thumbs.db
