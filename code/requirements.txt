@@ -1,0 +1,12 @@
+# 法眼AI 法律案件分析系统 v3.0
+# 依赖包
+
+jieba>=0.42
+rank-bm25>=0.2
+scikit-learn>=1.0
+scipy>=1.9
+langchain-openai>=0.1.0
+fastapi>=0.100
+uvicorn>=0.23
+pandas>=2.0
+python-dotenv>=1.0

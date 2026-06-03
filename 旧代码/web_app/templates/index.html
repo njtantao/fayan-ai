@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>法眼AI - 法律案件分析</title>
+    <style>
+        /* ============================================================
+           全局
+           ============================================================ */
+        :root {
+            --primary: #1a3a5c;
+            --primary-light: #2c5282;
+            --accent: #c9a84c;
+            --bg: #f5f6fa;
+            --surface: #ffffff;
+            --border: #dde2ee;
+            --text: #1a202c;
+            --text-muted: #718096;
+            --success: #276749;
+            --warning: #c05621;
+            --danger: #c53030;
+            --lawyer: #6b21a8;
+            --shadow: 0 2px 12px rgba(26,58,92,0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ============================================================
+           顶栏
+           ============================================================ */
+        header {
+            background: var(--primary);
+            color: #fff;
+            padding: 0 40px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+        .logo span { color: var(--accent); }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 13px;
+        }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #aaa;
+        }
+        .status-dot.ok { background: #68d391; box-shadow: 0 0 6px #68d391; }
+        .status-dot.err { background: #fc8181; }
+
+        .header-case-counts {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+        .header-count-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .header-count-civil {
+            background: rgba(39, 103, 73, 0.2);
+            color: #9ae6c1;
+            border: 1px solid rgba(39, 103, 73, 0.4);
+        }
+        .header-count-criminal {
+            background: rgba(197, 48, 48, 0.2);
+            color: #feb2b2;
+            border: 1px solid rgba(197, 48, 48, 0.4);
+        }
+        .header-count-label { opacity: 0.7; font-size: 11px; }
+        .header-count-num { font-size: 13px; }
+
+        /* ============================================================
+           容器
+           ============================================================ */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        /* ============================================================
+           标题区
+           ============================================================ */
+        .page-title {
+            margin-bottom: 8px;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .page-desc {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        /* ============================================================
+           卡片
+           ============================================================ */
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 28px 32px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--accent);
+            display: inline-block;
+        }
+
+        /* ============================================================
+           案情输入
+           ============================================================ */
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.7;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.2s;
+            background: #fafbfd;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            background: #fff;
+        }
+
+        .input-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* ============================================================
+           分析参数（选填）
+           ============================================================ */
+        .params-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 14px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        input[type="number"], input[type="text"] {
+            padding: 9px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+            background: #fafbfd;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            background: #fff;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        input[type="checkbox"] {
+            width: 16px; height: 16px;
+            accent-color: var(--primary);
+        }
+
+        /* ============================================================
+           智能识别区
+           ============================================================ */
+        .auto-detect-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: none;
+        }
+        .auto-detect-card.show { display: block; }
+
+        .auto-detect-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .auto-detect-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        .auto-detect-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .detect-tags {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .detect-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .detect-tag.type-civil { background: #e6f4ea; color: #276749; border-color: #a3d4b5; }
+        .detect-tag.type-criminal { background: #fff5f5; color: #c53030; border-color: #fbb; }
+        .detect-tag.type-cross { background: #faf5ff; color: #6b21a8; border-color: #d8b4fe; }
+        .detect-tag.amount { background: #e8f0fe; color: #2c5282; border-color: #b3c9f7; }
+        .detect-tag.party { background: #fffaf0; color: #c05621; border-color: #fbd38d; }
+        .detect-tag.confidence { background: #f0f0f0; color: #666; border-color: #ccc; }
+        .detect-tag:hover { filter: brightness(0.95); }
+        .detect-tag .tag-label { font-size: 11px; opacity: 0.7; }
+        .detect-tag .tag-value { font-weight: 600; }
+        .detect-tag .overridden { font-size: 10px; opacity: 0.5; text-decoration: line-through; }
+
+        .detect-loading {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        /* ============================================================
+           提交按钮
+           ============================================================ */
+        .btn-analyze {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 16px;
+        }
+        .btn-analyze:hover:not(:disabled) { background: var(--primary-light); }
+        .btn-analyze:active:not(:disabled) { transform: scale(0.99); }
+        .btn-analyze:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        /* ============================================================
+           分析结果
+           ============================================================ */
+        #result-area { display: none; }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .complexity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .complexity-low { background: #e6fffa; color: #276749; }
+        .complexity-medium { background: #fffaf0; color: #c05621; }
+        .complexity-high { background: #fff5f5; color: #c53030; }
+        .complexity-ultra { background: #faf5ff; color: #6b21a8; }
+
+        .lawyer-banner {
+            background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+            border: 1.5px solid #d8b4fe;
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            color: var(--lawyer);
+            font-size: 15px;
+        }
+        .lawyer-banner strong { display: block; margin-bottom: 4px; font-size: 16px; }
+
+        /* 结论 */
+        .conclusion-item {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px 22px;
+            margin-bottom: 14px;
+            background: #fafbfd;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .conclusion-num {
+            display: inline-block;
+            width: 22px; height: 22px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 22px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-right: 10px;
+        }
+
+        .conclusion-content {
+            font-size: 15px;
+            line-height: 1.8;
+            color: var(--text);
+        }
+
+        /* 引用 */
+        .citation-list {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border);
+        }
+        .citation-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #e8f0fe;
+            color: var(--primary-light);
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 12px;
+            font-family: "Courier New", monospace;
+            margin: 3px 4px 3px 0;
+        }
+        .citation-tag .cit-type { opacity: 0.6; font-size: 10px; }
+
+        /* 类案参考 */
+        .case-ref-item {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 10px;
+        }
+        .case-ref-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+        .case-ref-id {
+            font-family: "Courier New", monospace;
+            font-size: 12px;
+            color: var(--primary-light);
+            background: #e8f0fe;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .case-ref-score {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .case-ref-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .case-ref-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .case-ref-ruling {
+            font-size: 13px;
+            color: #4a5568;
+            line-height: 1.6;
+            background: #f7f8fa;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent);
+        }
+
+        /* ============================================================
+           免责声明
+           ============================================================ */
+        .disclaimer {
+            background: #fffbea;
+            border: 1px solid #f0d060;
+            border-radius: 8px;
+            padding: 14px 18px;
+            font-size: 13px;
+            color: #7a6400;
+            line-height: 1.7;
+        }
+        .disclaimer strong { color: #5a4800; }
+
+        /* ============================================================
+           错误提示
+           ============================================================ */
+        .error-box {
+            background: #fff5f5;
+            border: 1px solid #fc8181;
+            border-radius: 8px;
+            padding: 14px 18px;
+            color: var(--danger);
+            font-size: 14px;
+        }
+
+        /* ============================================================
+           加载动画
+           ============================================================ */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(245,246,250,0.85);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .loading-overlay.show { display: flex; }
+
+        .spinner {
+            width: 44px; height: 44px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text {
+            color: var(--primary);
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        /* ============================================================
+           响应式
+           ============================================================ */
+        @media (max-width: 700px) {
+            header { padding: 0 20px; }
+            .container { padding: 20px 14px; }
+            .card { padding: 20px 18px; }
+            .params-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* ============================================================
+           trace_id
+           ============================================================ */
+        .trace-id {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: "Courier New", monospace;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 加载遮罩 -->
+<div class="loading-overlay" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">正在检索类案...</div>
+</div>
+
+<!-- 顶栏 -->
+<header>
+    <div class="logo">法<span>眼</span>AI · 法律案件分析</div>
+<div class="header-status">
+            <div class="header-case-counts">
+                <div class="header-count-item header-count-civil">
+                    <span class="header-count-label">民事</span>
+                    <span class="header-count-num" id="civil-count">--</span>
+                </div>
+                <div class="header-count-item header-count-criminal">
+                    <span class="header-count-label">刑事</span>
+                    <span class="header-count-num" id="criminal-count">--</span>
+                </div>
+            </div>
+            <div style="width:1px;height:20px;background:rgba(255,255,255,0.2);margin:0 4px;"></div>
+            <div id="status-indicator" style="display:flex;align-items:center;gap:8px;">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">初始化中</span>
+            </div>
+        </div>
+</header>
+
+<!-- 主内容 -->
+<div class="container">
+
+    <!-- 页面说明 -->
+    <h1 class="page-title">案件分析</h1>
+    <p class="page-desc">输入您的案情描述，系统基于法律知识库进行分析，所有结论均附有案例引用。</p>
+
+    <!-- 输入卡片 -->
+    <div class="card">
+        <div class="card-title">案情描述</div>
+        <textarea
+            id="case_text"
+            placeholder="请输入案件事实描述，包括：
+· 当事人关系（如：甲向乙借款、房屋买卖双方）
+· 核心争议（如：款项性质、房屋归属、合同效力）
+· 已有证据情况（如：有无借条、转账记录、合同）
+· 其他背景（如：案件经过、所处阶段）"
+        ></textarea>
+        <div class="input-footer">
+            <span id="char-count">0 字</span>
+            <div style="display:flex;gap:10px;align-items:center">
+                <span>建议100字以上</span>
+                <button type="button" onclick="clearForm()" style="background:none;border:1px solid #c9a84c;color:#c9a84c;padding:3px 12px;border-radius:4px;font-size:12px;cursor:pointer">清空</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 智能识别卡片 -->
+    <div class="auto-detect-card" id="auto-detect-card">
+        <div class="auto-detect-header">
+            <span class="auto-detect-title">⚡ 智能识别</span>
+            <span class="auto-detect-desc" id="detect-status">输入案情后自动识别（点击标签可手动修改）</span>
+        </div>
+        <div class="detect-tags" id="detect-tags">
+            <span class="detect-tag" id="tag-type">
+                <span class="tag-label">案件类型</span>
+                <span class="tag-value" id="detect-type">—</span>
+            </span>
+            <span class="detect-tag amount" id="tag-amount">
+                <span class="tag-label">涉案金额</span>
+                <span class="tag-value" id="detect-amount">—</span>
+            </span>
+            <span class="detect-tag party" id="tag-party">
+                <span class="tag-label">当事人数</span>
+                <span class="tag-value" id="detect-party">—</span>
+            </span>
+            <span class="detect-tag confidence">
+                <span class="tag-label">置信度</span>
+                <span class="tag-value" id="detect-confidence">—</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- 参数卡片 -->
+    <div class="card">
+        <div class="card-title">分析参数（选填）</div>
+        <div class="params-grid">
+            <div class="form-group">
+                <label>涉案金额（元）</label>
+                <input type="number" id="amount" placeholder="如：500000" min="0" step="1000">
+            </div>
+            <div class="form-group">
+                <label>当事人数量</label>
+                <input type="number" id="party_count" placeholder="默认2" min="2" max="100" value="2">
+            </div>
+            <div class="form-group">
+                <label>证据情况</label>
+                <div class="checkbox-group" style="margin-top:8px">
+                    <input type="checkbox" id="has_evidence_gap">
+                    <label for="has_evidence_gap" style="font-weight:400;cursor:pointer">证据存在缺口</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="has_criminal_cross">
+                    <label for="has_criminal_cross" style="font-weight:400;cursor:pointer">涉及刑民交叉</label>
+                </div>
+            </div>
+        </div>
+        <button class="btn-analyze" id="btn-analyze" onclick="doAnalyze()">
+            开始分析
+        </button>
+    </div>
+
+    <!-- 结果卡片（初始隐藏） -->
+    <div id="result-area">
+
+        <!-- 律师引导 -->
+        <div class="lawyer-banner" id="lawyer-banner" style="display:none">
+            <strong>⚠️ 建议寻求专业律师支持</strong>
+            <span id="lawyer-message"></span>
+        </div>
+
+        <!-- 结论 -->
+        <div class="card" id="conclusions-card">
+            <div class="result-header">
+                <div class="card-title">分析结论</div>
+                <span class="complexity-badge" id="complexity-badge"></span>
+            </div>
+            <div id="conclusions-list"></div>
+        </div>
+
+        <!-- 类案参考 -->
+        <div class="card" id="cases-card">
+            <div class="card-title">类案参考</div>
+            <div id="cases-list"></div>
+        </div>
+
+        <!-- 原始输出（可折叠）-->
+        <div class="card" id="raw-card" style="display:none">
+            <div class="card-title">Trace ID</div>
+            <pre class="trace-id" id="trace-id"></pre>
+        </div>
+
+        <!-- 免责声明 -->
+        <div class="disclaimer">
+            <strong>免责声明</strong>：本系统基于有限的法律案例库提供分析参考，所有结论均
+            来自已有案例的归纳，不构成法律意见。系统不对分析结果的准确性、完整性作任何
+            保证。请您以执业律师的专业判断为准，重要案件务必咨询专业律师。
+            本系统生成的内容未经专业法律审核，不可直接用于诉讼或正式法律程序。
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ============================================================
+    // 初始化：检查服务状态
+    // ============================================================
+    async function checkStatus() {
+        const dot = document.getElementById('status-dot');
+        const text = document.getElementById('status-text');
+        try {
+            const r = await fetch('/status');
+            const d = await r.json();
+            if (d.ok) {
+                dot.className = 'status-dot ok';
+                text.textContent = '就绪';
+                document.getElementById('civil-count').textContent = d.civil_count || 0;
+                document.getElementById('criminal-count').textContent = d.criminal_count || 0;
+            } else {
+                dot.className = 'status-dot err';
+                text.textContent = '未就绪: ' + (d.error || '未知错误');
+            }
+        } catch (e) {
+            dot.className = 'status-dot err';
+            text.textContent = '服务未启动';
+        }
+    }
+    checkStatus();
+
+    // ============================================================
+    // 字数统计
+    // ============================================================
+    let _detectTimer = null;
+
+    const ta = document.getElementById('case_text');
+    const charCount = document.getElementById('char-count');
+    ta.addEventListener('input', () => {
+        charCount.textContent = ta.value.length + ' 字';
+        // 防抖：字数变化后等 800ms 再请求检测
+        clearTimeout(_detectTimer);
+        if (ta.value.trim().length >= 5) {
+            _detectTimer = setTimeout(() => autoDetect(ta.value), 800);
+        }
+    });
+
+    // ============================================================
+    // 分析
+    // ============================================================
+    let isLoading = false;
+
+    function setLoading(on, msg) {
+        isLoading = on;
+        document.getElementById('loading').className = on ? 'loading-overlay show' : 'loading-overlay';
+        document.getElementById('loading-text').textContent = msg || '正在分析...';
+        document.getElementById('btn-analyze').disabled = on;
+    }
+
+    async function doAnalyze() {
+        if (isLoading) return;
+
+        const caseText = document.getElementById('case_text').value.trim();
+        if (!caseText) { alert('请输入案情描述'); return; }
+        if (caseText.length < 10) { alert('案情描述过短'); return; }
+
+        setLoading(true, '正在检索类案...');
+
+        const body = {
+            case_text: caseText,
+            amount: parseFloat(document.getElementById('amount').value) || 0,
+            party_count: parseInt(document.getElementById('party_count').value) || 2,
+            has_evidence_gap: document.getElementById('has_evidence_gap').checked,
+            has_criminal_cross: document.getElementById('has_criminal_cross').checked,
+        };
+
+        try {
+            const resp = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                document.getElementById('result-area').style.display = 'block';
+                document.getElementById('conclusions-card').style.display = 'none';
+                document.getElementById('cases-card').style.display = 'none';
+                document.getElementById('lawyer-banner').style.display = 'none';
+                document.getElementById('conclusions-list').innerHTML =
+                    `<div class="error-box">${data.error || '分析失败'}</div>`;
+                return;
+            }
+
+            renderResult(data);
+        } catch (e) {
+            document.getElementById('result-area').style.display = 'block';
+            document.getElementById('conclusions-list').innerHTML =
+                `<div class="error-box">请求失败: ${e.message}</div>`;
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // ============================================================
+    // 渲染结果
+    // ============================================================
+    function renderResult(data) {
+        document.getElementById('result-area').style.display = 'block';
+        document.getElementById('conclusions-card').style.display = 'block';
+        document.getElementById('cases-card').style.display = 'block';
+
+        // Trace ID
+        document.getElementById('trace-id').textContent = 'Trace: ' + (data.trace_id || '');
+
+        // 复杂度标签
+        const badge = document.getElementById('complexity-badge');
+        const compMap = {
+            'low': ['低复杂度', 'complexity-low'],
+            'medium': ['中复杂度', 'complexity-medium'],
+            'high': ['高复杂度', 'complexity-high'],
+            'ultra': ['超复杂', 'complexity-ultra'],
+        };
+        const [compLabel, compCls] = compMap[data.complexity] || ['未知', 'complexity-low'];
+        badge.textContent = compLabel;
+        badge.className = 'complexity-badge ' + compCls;
+
+        // 律师引导
+        const lb = document.getElementById('lawyer-banner');
+        if (data.lawyer_referral) {
+            lb.style.display = 'block';
+            document.getElementById('lawyer-message').textContent = data.lawyer_message || '';
+        } else {
+            lb.style.display = 'none';
+        }
+
+        // 结论
+        const conclusionsEl = document.getElementById('conclusions-list');
+        if (!data.conclusions || data.conclusions.length === 0) {
+            conclusionsEl.innerHTML = '<div class="error-box">无法形成分析结论，建议咨询专业律师。</div>';
+        } else {
+            conclusionsEl.innerHTML = data.conclusions.map((c, i) => `
+                <div class="conclusion-item">
+                    <div>
+                        <span class="conclusion-num">${i + 1}</span>
+                        <div class="conclusion-content">${escapeHtml(c.content)}</div>
+                    </div>
+                    ${c.citations && c.citations.length > 0 ? `
+                    <div class="citation-list">
+                        ${c.citations.map(cit => `
+                            <span class="citation-tag">
+                                <span class="cit-type">${cit.type === 'case' ? '案' : '法'}</span>
+                                ${escapeHtml(cit.id)}
+                            </span>
+                        `).join('')}
+                    </div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // 类案参考
+        const casesEl = document.getElementById('cases-list');
+        if (data.retrieved_cases && data.retrieved_cases.length > 0) {
+            casesEl.innerHTML = data.retrieved_cases.map(r => `
+                <div class="case-ref-item">
+                    <div class="case-ref-header">
+                        <span class="case-ref-id">${escapeHtml(r.case_number)}</span>
+                        <span class="case-ref-score">相关度 ${(r.score * 100).toFixed(0)}%</span>
+                    </div>
+                    <div class="case-ref-title">${escapeHtml(r.title)}</div>
+                    <div class="case-ref-meta">${escapeHtml(r.court)} · ${escapeHtml(r.cause_of_action)}</div>
+                    ${r.ruling_points ? `<div class="case-ref-ruling">${escapeHtml(r.ruling_points)}</div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            casesEl.innerHTML = '<div style="color:var(--text-muted);font-size:14px">未检索到相关案例</div>';
+        }
+
+        // 滚动到结果
+        document.getElementById('result-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function clearForm() {
+        document.getElementById('case_text').value = '';
+        document.getElementById('char-count').textContent = '0 字';
+        document.getElementById('amount').value = '';
+        document.getElementById('party_count').value = '2';
+        document.getElementById('has_evidence_gap').checked = false;
+        document.getElementById('has_criminal_cross').checked = false;
+        document.getElementById('result-area').style.display = 'none';
+        // 重置自动检测区
+        document.getElementById('auto-detect-card').classList.remove('show');
+        document.getElementById('detect-type').textContent = '—';
+        document.getElementById('detect-amount').textContent = '—';
+        document.getElementById('detect-party').textContent = '—';
+        document.getElementById('detect-confidence').textContent = '—';
+    }
+
+    // ============================================================
+    // 智能自动检测
+    // ============================================================
+    async function autoDetect(text) {
+        const card = document.getElementById('auto-detect-card');
+        card.classList.add('show');
+        document.getElementById('detect-status').textContent = '正在识别...';
+        document.getElementById('detect-type').textContent = '…';
+        document.getElementById('detect-amount').textContent = '…';
+        document.getElementById('detect-party').textContent = '…';
+        document.getElementById('detect-confidence').textContent = '…';
+
+        try {
+            const resp = await fetch('/api/classify', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({case_text: text})
+            });
+            const data = await resp.json();
+            if (data.error) throw new Error(data.error);
+
+            // 案件类型
+            const typeMap = {'民事': 'type-civil', '刑事': 'type-criminal', '刑民交叉': 'type-cross'};
+            const tagType = document.getElementById('tag-type');
+            tagType.className = 'detect-tag ' + (typeMap[data.case_type] || 'type-civil');
+            document.getElementById('detect-type').textContent = data.case_type;
+
+            // 涉案金额
+            if (data.amount) {
+                const a = data.amount;
+                const label = a >= 100000000 ? (a/100000000).toFixed(1)+'亿' :
+                              a >= 10000 ? (a/10000).toFixed(0)+'万' :
+                              a+'元';
+                document.getElementById('detect-amount').textContent = label;
+                // 自动填入（若用户未手动填）
+                const amountInput = document.getElementById('amount');
+                if (!amountInput.value || amountInput.dataset.auto === '1') {
+                    amountInput.value = a;
+                    amountInput.dataset.auto = '1';
+                }
+            } else {
+                document.getElementById('detect-amount').textContent = data.amount_reason || '—';
+            }
+
+            // 当事人数
+            if (data.party_count) {
+                document.getElementById('detect-party').textContent = '约' + data.party_count + '方';
+                // 自动填入（若用户未手动填）
+                const partyInput = document.getElementById('party_count');
+                if (!partyInput.value || partyInput.value === '2' || partyInput.dataset.auto === '1') {
+                    partyInput.value = data.party_count;
+                    partyInput.dataset.auto = '1';
+                }
+            } else {
+                document.getElementById('detect-party').textContent = data.party_count_reason || '—';
+            }
+
+            // 置信度
+            const conf = Math.round((data.confidence || 0) * 100);
+            document.getElementById('detect-confidence').textContent = conf + '%';
+            document.getElementById('detect-status').textContent = '已识别（点击标签可手动修改）';
+
+            // 刑民交叉时自动勾选
+            if (data.case_type === '刑民交叉') {
+                document.getElementById('has_criminal_cross').checked = true;
+            }
+
+        } catch (e) {
+            document.getElementById('detect-status').textContent = '识别失败：' + e.message;
+        }
+    }
+
+    // 用户手动修改涉案金额时，标记为手动
+    document.getElementById('amount').addEventListener('input', function() {
+        this.dataset.auto = '0';
+    });
+    document.getElementById('party_count').addEventListener('input', function() {
+        this.dataset.auto = '0';
+    });
+
+    // Enter 快捷提交（Ctrl+Enter）
+    document.getElementById('case_text').addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            doAnalyze();
+        }
+    });
+</script>
+
+</body>
+</html>
