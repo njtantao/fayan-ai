@@ -1,0 +1,8 @@
+flask>=3.0
+flask-cors>=4.0
+jieba>=0.42
+rank-bm25>=0.2
+scikit-learn>=1.0
+scipy>=1.9
+pandas>=2.0
+python-dotenv>=1.0

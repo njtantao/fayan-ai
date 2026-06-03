@@ -16,9 +16,11 @@ os.chdir(PROJECT_ROOT)
 from dotenv import load_dotenv
 load_dotenv()
 
+# Environment variables (set in Render dashboard or .env locally)
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 CSV_PATH = os.path.join(PROJECT_ROOT, "data", "all_cases_perfect.csv")
 PORT = int(os.environ.get("PORT", 5099))
+DATA_URL = os.environ.get("DATA_URL", "")  # Optional: download case CSV at startup
 
 # 导入核心模块（从项目根目录导入）
 from fayan_main import FaYanLegal, MINIMAX_BASE_URL, LLM_MODEL
@@ -39,6 +41,18 @@ _init_error: str = None
 def get_fayan():
     global _fayan, _init_error
     if _fayan is None:
+        # 启动时：如果CSV不存在但有DATA_URL，自动下载
+        if DATA_URL and not os.path.exists(CSV_PATH):
+            print(f"案例库不存在，从 {DATA_URL} 下载...")
+            try:
+                import urllib.request
+                os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
+                urllib.request.urlretrieve(DATA_URL, CSV_PATH + ".tmp")
+                os.rename(CSV_PATH + ".tmp", CSV_PATH)
+                print(f"案例库下载完成: {CSV_PATH}")
+            except Exception as e:
+                print(f"下载案例库失败: {e}")
+
         api_key = os.environ.get("MINIMAX_API_KEY", "")
         if not api_key:
             _init_error = "MINIMAX_API_KEY 未设置或无效"
