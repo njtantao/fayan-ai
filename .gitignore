@@ -1,3 +1,5 @@
 # Data branch - only large data files
 *.csv
 *.parquet
+*.csv
+*.csv
