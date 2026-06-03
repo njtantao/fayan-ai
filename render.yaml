@@ -1,0 +1,20 @@
+# render.yaml - 法眼AI 自动部署配置
+# Render Blueprint 会在部署时自动创建/更新环境变量
+
+services:
+  - type: web
+    name: fayan-ai
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    plan: free
+    healthCheckPath: /status
+    envVars:
+      - key: MINIMAX_API_KEY
+        sync: false  # 不同步到 GitHub，保持安全
+      - key: DATA_URL
+        value: https://github.com/njtantao/fayan-ai/releases/download/v1.0.0/all_cases_perfect.parquet
+      - key: PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.11
