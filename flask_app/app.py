@@ -20,7 +20,7 @@ load_dotenv()
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 CSV_PATH = os.path.join(PROJECT_ROOT, "data", "all_cases_perfect.csv")
 PORT = int(os.environ.get("PORT", 5099))
-DATA_URL = os.environ.get("DATA_URL", "")  # Optional: download case CSV at startup
+DATA_URL = os.environ.get("DATA_URL", "https://github.com/njtantao/fayan-ai/releases/download/v1.0.0/all_cases_perfect.csv")  # Optional: download case CSV at startup
 
 # 导入核心模块（从项目根目录导入）
 from fayan_main import FaYanLegal, MINIMAX_BASE_URL, LLM_MODEL
